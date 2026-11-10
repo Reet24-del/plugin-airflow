@@ -5,6 +5,7 @@ import java.util.Map;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.http.HttpRequest;
 import io.kestra.core.http.HttpResponse;
 import io.kestra.core.http.client.HttpClient;
@@ -100,9 +101,14 @@ public abstract class AirflowConnection extends Task {
             .runContext(runContext);
     }
 
-    private HttpRequest.HttpRequestBuilder getRequestBuilder(RunContext runContext, URI uri) {
-        return HttpRequest.builder()
+    private HttpRequest.HttpRequestBuilder getRequestBuilder(RunContext runContext, URI uri) throws IllegalVariableEvaluationException {
+        HttpRequest.HttpRequestBuilder builder = HttpRequest.builder()
             .uri(uri)
             .addHeader("Content-Type", JSON_CONTENT_TYPE);
+
+        runContext.render(this.headers).asMap(String.class, String.class)
+            .forEach(builder::addHeader);
+
+        return builder;
     }
 }
