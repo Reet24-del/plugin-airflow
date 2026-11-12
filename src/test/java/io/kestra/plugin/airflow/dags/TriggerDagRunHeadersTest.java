@@ -11,6 +11,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import io.kestra.core.context.TestRunContextFactory;
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
+import io.kestra.core.utils.IdUtils;
 
 import jakarta.inject.Inject;
 
@@ -43,7 +44,7 @@ class TriggerDagRunHeadersTest {
         stubDagRun("manual__headers");
 
         var task = TriggerDagRun.builder()
-            .id("run_dag")
+            .id(IdUtils.create())
             .type(TriggerDagRun.class.getName())
             .baseUrl(Property.ofValue(wireMock.baseUrl()))
             .dagId(Property.ofValue("example_astronauts"))
@@ -66,7 +67,7 @@ class TriggerDagRunHeadersTest {
                 .withHeader("Content-Type", equalTo("application/json"))
         );
         wireMock.verify(
-            getRequestedFor(urlEqualTo(DAG_RUNS + "/manual__headers"))
+            getRequestedFor(urlEqualTo("%s/%s".formatted(DAG_RUNS, "manual__headers")))
                 .withHeader("Authorization", equalTo("Bearer my-token"))
                 .withHeader("X-Custom", equalTo("kestra"))
         );
@@ -77,7 +78,7 @@ class TriggerDagRunHeadersTest {
         stubDagRun("manual__no_headers");
 
         var task = TriggerDagRun.builder()
-            .id("run_dag")
+            .id(IdUtils.create())
             .type(TriggerDagRun.class.getName())
             .baseUrl(Property.ofValue(wireMock.baseUrl()))
             .dagId(Property.ofValue("example_astronauts"))
@@ -93,6 +94,30 @@ class TriggerDagRunHeadersTest {
         );
     }
 
+    @Test
+    void shouldLetCustomContentTypeReplaceTheDefault() throws Exception {
+        stubDagRun("manual__content_type");
+
+        var task = TriggerDagRun.builder()
+            .id(IdUtils.create())
+            .type(TriggerDagRun.class.getName())
+            .baseUrl(Property.ofValue(wireMock.baseUrl()))
+            .dagId(Property.ofValue("example_astronauts"))
+            .body(Property.ofValue(Map.of("conf", Map.of())))
+            .headers(Property.ofValue(Map.of(
+                "content-type", "application/json; charset=UTF-8"
+            )))
+            .build();
+
+        var output = task.run(runContextFactory.of());
+
+        assertThat(output.getDagRunId(), is("manual__content_type"));
+        wireMock.verify(
+            postRequestedFor(urlEqualTo(DAG_RUNS))
+                .withHeader("Content-Type", equalTo("application/json; charset=UTF-8"))
+        );
+    }
+
     private static void stubDagRun(String dagRunId) {
         wireMock.stubFor(
             post(urlEqualTo(DAG_RUNS))
@@ -101,7 +126,7 @@ class TriggerDagRunHeadersTest {
                     """.formatted(dagRunId)))
         );
         wireMock.stubFor(
-            get(urlEqualTo(DAG_RUNS + "/" + dagRunId))
+            get(urlEqualTo("%s/%s".formatted(DAG_RUNS, dagRunId)))
                 .willReturn(okJson("""
                     {"dag_id":"example_astronauts","dag_run_id":"%s","state":"success",
                      "start_date":"2026-10-19T08:00:00+00:00","end_date":"2026-10-19T08:00:05+00:00"}
