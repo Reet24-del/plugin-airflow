@@ -2,6 +2,7 @@ package io.kestra.plugin.airflow;
 
 import java.net.URI;
 import java.util.Map;
+import java.util.TreeMap;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -102,12 +103,12 @@ public abstract class AirflowConnection extends Task {
     }
 
     private HttpRequest.HttpRequestBuilder getRequestBuilder(RunContext runContext, URI uri) throws IllegalVariableEvaluationException {
-        HttpRequest.HttpRequestBuilder builder = HttpRequest.builder()
-            .uri(uri)
-            .addHeader("Content-Type", JSON_CONTENT_TYPE);
+        var requestHeaders = new TreeMap<String, String>(String.CASE_INSENSITIVE_ORDER);
+        requestHeaders.put("Content-Type", JSON_CONTENT_TYPE);
+        requestHeaders.putAll(runContext.render(this.headers).asMap(String.class, String.class));
 
-        runContext.render(this.headers).asMap(String.class, String.class)
-            .forEach(builder::addHeader);
+        var builder = HttpRequest.builder().uri(uri);
+        requestHeaders.forEach(builder::addHeader);
 
         return builder;
     }
