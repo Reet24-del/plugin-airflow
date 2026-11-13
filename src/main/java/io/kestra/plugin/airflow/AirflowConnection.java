@@ -103,12 +103,12 @@ public abstract class AirflowConnection extends Task {
     }
 
     private HttpRequest.HttpRequestBuilder getRequestBuilder(RunContext runContext, URI uri) throws IllegalVariableEvaluationException {
-        var requestHeaders = new TreeMap<String, String>(String.CASE_INSENSITIVE_ORDER);
-        requestHeaders.put("Content-Type", JSON_CONTENT_TYPE);
-        requestHeaders.putAll(runContext.render(this.headers).asMap(String.class, String.class));
+        var rHeaders = new TreeMap<String, String>(String.CASE_INSENSITIVE_ORDER);
+        rHeaders.put("Content-Type", JSON_CONTENT_TYPE);
+        rHeaders.putAll(runContext.render(this.headers).asMap(String.class, String.class));
 
         var builder = HttpRequest.builder().uri(uri);
-        requestHeaders.forEach(builder::addHeader);
+        rHeaders.forEach(builder::addHeader);
 
         return builder;
     }
